@@ -3,6 +3,7 @@
  * Manages document list, sidebar, theme, and initialization.
  */
 (async function main() {
+  try {
   // ─── Init Storage ──────────────────────────────
   const storage = new Storage();
   await storage.open();
@@ -270,5 +271,13 @@ _Happy writing! ✍️_
     await loadDocList();
   }
 
+  // ─── Show the app ───────────────────────────────
+  document.getElementById('loading').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+
   console.log('📝 MD Docs ready!');
+  } catch (err) {
+    document.getElementById('loading').textContent = '⚠️ ' + err.message;
+    console.error('MD Docs init error:', err);
+  }
 })();

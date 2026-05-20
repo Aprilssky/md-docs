@@ -53,13 +53,19 @@ class Editor {
 
     try {
       const { resolved } = await this.storage.renderContent(markdown, this.mediaBlobCache);
-      const html = marked.parse(resolved, {
-        breaks: true,
-        gfm: true,
-      });
+      let html = '';
+      if (typeof marked !== 'undefined' && marked.parse) {
+        html = marked.parse(resolved, {
+          breaks: true,
+          gfm: true,
+        });
+      } else {
+        html = '<p><em>Markdown parser not loaded. Plain text:</em></p><pre>' + this._escapeHtml(resolved) + '</pre>';
+      }
       this.previewEl.innerHTML = html;
     } catch (err) {
       console.error('Render error:', err);
+      this.previewEl.innerHTML = '<p style="color:var(--danger)">⚠️ Render error: ' + this._escapeHtml(err.message) + '</p>';
     }
   }
 
@@ -176,6 +182,12 @@ class Editor {
   // ─── Toolbar ──────────────────────────────────
 
   _bindToolbar() {
+    const safeClick = (id, fn) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('click', fn);
+      else console.warn('Element #' + id + ' not found');
+    };
+
     const cmd = (action) => this.toolbar.querySelector(`[data-cmd="${action}"]`);
 
     const actions = {
@@ -215,19 +227,11 @@ class Editor {
       }
     });
 
-    // Media insertion
-    document.getElementById('insert-image').addEventListener('click', () => {
-      this._openFileDialog('image/*', 'image');
-    });
-    document.getElementById('insert-video').addEventListener('click', () => {
-      this._openFileDialog('video/*', 'video');
-    });
-    document.getElementById('insert-audio').addEventListener('click', () => {
-      this._openFileDialog('audio/*', 'audio');
-    });
-    document.getElementById('record-audio').addEventListener('click', () => {
-      this._openRecorder();
-    });
+    // Media insertion (with null guards)
+    safeClick('insert-image', () => this._openFileDialog('image/*', 'image'));
+    safeClick('insert-video', () => this._openFileDialog('video/*', 'video'));
+    safeClick('insert-audio', () => this._openFileDialog('audio/*', 'audio'));
+    safeClick('record-audio', () => this._openRecorder());
 
     // Editor input → auto-preview + autosave
     this.editorEl.addEventListener('input', () => {
@@ -392,6 +396,12 @@ class Editor {
       reader.readAsText(file);
     };
     input.click();
+  }
+
+  _escapeHtml(str) {
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
   }
 
   // ─── Cleanup ──────────────────────────────────
